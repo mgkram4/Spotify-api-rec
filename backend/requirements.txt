@@ -1,0 +1,11 @@
+# backend/requirements.txt
+flask
+flask-cors
+python-dotenv
+spotipy
+scikit-learn
+numpy
+pandas
+gunicorn
+requests
+python-jose
