@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:spotfiy_rec/constants/theme.dart';
 import 'package:spotfiy_rec/pages/album.dart';
 import 'package:spotfiy_rec/pages/artist.dart';
+import 'package:spotfiy_rec/pages/create_playlist.dart';
 import 'package:spotfiy_rec/pages/home_page.dart';
 import 'package:spotfiy_rec/pages/login_page.dart';
 import 'package:spotfiy_rec/pages/playlist.dart';
 import 'package:spotfiy_rec/pages/profile.dart';
 import 'package:spotfiy_rec/pages/recommend.dart';
 import 'package:spotfiy_rec/pages/register.dart';
-import 'package:spotfiy_rec/pages/search.dart';
 import 'package:spotfiy_rec/pages/song.dart';
 import 'package:spotfiy_rec/services/auth_service.dart';
 
@@ -33,7 +33,7 @@ class MainApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const SignUpPage(),
         '/home': (context) => const HomePage(),
-        '/search': (context) => const SearchPage(),
+        '/search': (context) => const CreatePlaylist(),
         '/profile': (context) => const ProfilePage(),
         '/recommend': (context) => const RecommendationPage(),
         '/album': (context) {

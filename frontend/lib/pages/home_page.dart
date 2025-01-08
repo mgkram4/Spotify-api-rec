@@ -67,9 +67,9 @@ class _HomePageState extends State<HomePage>
               bottom: TabBar(
                 controller: _tabController,
                 tabs: const [
-                  Tab(text: 'For You'),
-                  Tab(text: 'Playlists'),
-                  Tab(text: 'Discover'),
+                  Tab(text: 'Top Songs'),
+                  Tab(text: 'Top Artist'),
+                  Tab(text: 'Stats'),
                 ],
               ),
             ),
