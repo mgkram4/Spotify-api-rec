@@ -1,0 +1,26 @@
+{
+    "metadata" : {
+        "genre" : "eleronic",
+            "last_updated": "2024-01-08",
+    "total_tracks": 500,
+    "subgenres": ["house", "techno", "ambient", "trance"]
+  },
+  "tracks": [
+    {
+      "id": "spotify:track:1234567890",
+      "name": "Track Name",
+      "artist": "Artist Name",
+      "subgenre": "house",
+      "features": {
+        "energy": 0.8,
+        "danceability": 0.75,
+        "tempo": 128,
+        "valence": 0.6
+      },
+      "weight": 1.0,
+      "tags": ["deep", "melodic", "peak-time"],
+      "added_date": "2024-01-01",
+      "last_validated": "2024-01-08"
+    }
+  ]
+}
