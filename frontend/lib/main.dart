@@ -3,15 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:spotfiy_rec/constants/theme.dart';
 import 'package:spotfiy_rec/pages/album.dart';
 import 'package:spotfiy_rec/pages/artist.dart';
+import 'package:spotfiy_rec/pages/auth_wrapper.dart';
+import 'package:spotfiy_rec/pages/create.dart';
 import 'package:spotfiy_rec/pages/create_playlist.dart';
 import 'package:spotfiy_rec/pages/home_page.dart';
 import 'package:spotfiy_rec/pages/login_page.dart';
-import 'package:spotfiy_rec/pages/playlist.dart';
 import 'package:spotfiy_rec/pages/profile.dart';
 import 'package:spotfiy_rec/pages/recommend.dart';
 import 'package:spotfiy_rec/pages/register.dart';
 import 'package:spotfiy_rec/pages/song.dart';
-import 'package:spotfiy_rec/services/auth_service.dart';
+import 'package:spotfiy_rec/pages/spotify_connect_page.dart';
+import 'package:spotfiy_rec/pages/stats_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,10 +34,11 @@ class MainApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const SignUpPage(),
+        '/spotify-connect': (context) => SpotifyConnectPage(),
         '/home': (context) => const HomePage(),
-        '/search': (context) => const CreatePlaylist(),
+        '/create': (context) => const CreatePlaylist(),
         '/profile': (context) => const ProfilePage(),
-        '/recommend': (context) => const RecommendationPage(),
+        '/recommendation': (context) => const RecommendationPage(),
         '/album': (context) {
           final args = ModalRoute.of(context)!.settings.arguments
               as Map<String, dynamic>;
@@ -85,6 +88,7 @@ class MainApp extends StatelessWidget {
             duration: args['duration'],
           );
         },
+        '/stats': (context) => const StatsPage(),
       },
       onGenerateRoute: (settings) {
         // Handle dynamic routes or unknown routes here
@@ -97,63 +101,3 @@ class MainApp extends StatelessWidget {
     );
   }
 }
-
-// Example of how to navigate to these routes:
-/*
-// Navigate to album page
-
-Navigator.pushNamed(
-  context,
-  '/album',
-  arguments: {
-    'albumId': 'album_123',
-    'albumName': 'Album Name',
-    'artistName': 'Artist Name',
-    'imageUrl': 'https://example.com/image.jpg',
-    'releaseYear': 2024,
-    'trackCount': 12,
-  },
-);
-
-// Navigate to artist page
-Navigator.pushNamed(
-  context,
-  '/artist',
-  arguments: {
-    'artistId': 'artist_123',
-    'artistName': 'Artist Name',
-    'imageUrl': 'https://example.com/image.jpg',
-    'monthlyListeners': 1000000,
-  },
-);
-
-// Navigate to playlist page
-Navigator.pushNamed(
-  context,
-  '/playlist',
-  arguments: {
-    'playlistId': 'playlist_123',
-    'playlistName': 'My Playlist',
-    'description': 'Awesome playlist',
-    'creatorName': 'John Doe',
-    'imageUrl': 'https://example.com/image.jpg',
-    'followersCount': 1000,
-    'songCount': 25,
-    'totalDuration': const Duration(hours: 1, minutes: 30),
-  },
-);
-
-// Navigate to song page
-Navigator.pushNamed(
-  context,
-  '/song',
-  arguments: {
-    'songId': 'song_123',
-    'title': 'Song Title',
-    'artist': 'Artist Name',
-    'album': 'Album Name',
-    'imageUrl': 'https://example.com/image.jpg',
-    'duration': const Duration(minutes: 3, seconds: 30),
-  },
-);
-*/

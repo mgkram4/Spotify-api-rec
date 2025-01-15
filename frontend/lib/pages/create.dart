@@ -14,7 +14,11 @@ class PlaylistPage extends StatelessWidget {
     required this.playlistName,
     required this.playlistImage,
     required this.creatorName,
-    required this.songCount, required imageUrl, required description, required followersCount, required totalDuration,
+    required this.songCount,
+    required imageUrl,
+    required description,
+    required followersCount,
+    required totalDuration,
   }) : super(key: key);
 
   @override

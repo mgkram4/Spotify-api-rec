@@ -1,49 +1,55 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:spotfiy_rec/pages/home_page.dart';
-import 'package:spotfiy_rec/pages/login_page.dart';
+import 'package:flutter_web_auth/flutter_web_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class AuthWrapper extends StatefulWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
+class AuthService {
+  static final AuthService _instance = AuthService._internal();
+  factory AuthService() => _instance;
+  AuthService._internal();
 
-  @override
-  _AuthWrapperState createState() => _AuthWrapperState();
-}
+  static const String _clientId = '308ba87093704f49bec68ee891609d88';
+  static const String _redirectUri = 'com.example.myapp://callback';
 
-class _AuthWrapperState extends State<AuthWrapper> {
-  bool _showWelcome = false;
+  String? _spotifyToken;
+  String? get spotifyToken => _spotifyToken;
 
-  void _onGetStarted() {
-    setState(() {
-      _showWelcome = false;
-    });
+  Future<bool> signInWithSpotify() async {
+    try {
+      final result = await FlutterWebAuth.authenticate(
+        url: 'https://accounts.spotify.com/authorize'
+            '?client_id=$_clientId'
+            '&response_type=token'
+            '&redirect_uri=$_redirectUri'
+            '&scope=user-read-private%20user-read-email%20user-top-read%20user-read-recently-played%20playlist-modify-public%20playlist-modify-private',
+        callbackUrlScheme: 'spotify-rec',
+      );
+
+      _spotifyToken = Uri.parse(result)
+          .fragment
+          .split('&')
+          .firstWhere((e) => e.startsWith('access_token='))
+          .substring(13);
+
+      if (_spotifyToken != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('spotify_token', _spotifyToken!);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error signing in with Spotify: $e');
+      return false;
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_showWelcome) {
-      // return WelcomePage(onGetStarted: _onGetStarted);
-    }
+  Future<bool> isSignedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    _spotifyToken = prefs.getString('spotify_token');
+    return _spotifyToken != null;
+  }
 
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.active) {
-          User? user = snapshot.data;
-          if (user != null) {
-            return const HomePage();
-          } else {
-            return const LoginPage();
-          }
-        }
-
-        // LOAD STATE
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
-      },
-    );
+  Future<void> signOut() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('spotify_token');
+    _spotifyToken = null;
   }
 }

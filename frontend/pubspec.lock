@@ -81,6 +81,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.6"
+  equatable:
+    dependency: transitive
+    description:
+      name: equatable
+      sha256: "567c64b3cb4cf82397aac55f4f0cbd3ca20d77c6c03bedbc4ceaddc08904aef7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.7"
   fake_async:
     dependency: transitive
     description:
@@ -153,6 +161,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.18.1"
+  fl_chart:
+    dependency: "direct main"
+    description:
+      name: fl_chart
+      sha256: "10ddaf334fe84d59333a12d153043e366f243e0bdfff2df0313e1e249f5bf926"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.70.1"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -248,6 +264,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.2"
+  intl:
+    dependency: "direct main"
+    description:
+      name: intl
+      sha256: "00f33b908655e606b86d2ade4710a231b802eec6f11e87e4ea3783fd72077a50"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.20.1"
   js:
     dependency: transitive
     description:
@@ -473,10 +497,10 @@ packages:
     dependency: "direct main"
     description:
       name: spotify
-      sha256: "705f09a457a893973451c15f4072670ac4783d67e42c35c080c55a48dee3a01f"
+      sha256: e967c5e295792e9d38f4c5e9e60d7c2868ed9cb2a8fac2a67c75303f8395e374
       url: "https://pub.dev"
     source: hosted
-    version: "0.13.7"
+    version: "0.12.0"
   stack_trace:
     dependency: transitive
     description:
