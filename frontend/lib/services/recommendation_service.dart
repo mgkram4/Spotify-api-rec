@@ -1,25 +1,47 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 
 class RecommendationService {
-  final String baseUrl = 'http://localhost:5000/api'; // Flask API URL
+  // Get the appropriate base URL based on platform
+  String get baseUrl {
+    final url = Platform.isAndroid
+        ? 'http://10.0.2.2:5000/api'
+        : 'http://localhost:5000/api'; // Changed to localhost
+    print('Base URL: $url'); // Debug print
+    return url;
+  }
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Get available options for recommendation parameters
   Future<Map<String, dynamic>> getOptions() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/options'));
+      final url = '$baseUrl/options';
+      print('Full URL being called: $url'); // Debug print
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response headers: ${response.headers}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        throw Exception('Failed to load options');
+        throw Exception(
+            'Server returned ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('Error getting options: $e');
-      rethrow;
+      print('Error in getOptions: $e'); // Add debug logging
+      throw Exception('Failed to connect to server: $e');
     }
   }
 

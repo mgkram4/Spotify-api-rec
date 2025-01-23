@@ -72,11 +72,9 @@ class _HomePageState extends State<HomePage> {
         controller: _scrollController,
         slivers: [
           SliverAppBar(
-            expandedHeight: 200,
             floating: false,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              title: const Text('Your Music'),
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -155,94 +153,45 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).primaryColor.withOpacity(0.2),
-              Colors.grey[850]!.withOpacity(0.5),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.grey[850]?.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.white.withOpacity(0.1),
-            width: 1,
+            color: Colors.white.withOpacity(0.2),
+            width: 2,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Music Profile',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 2,
+                  ),
+                ),
+              ),
+              child: const Text(
+                'TOP GENRES',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            _buildMusicInsightBars(),
-            const SizedBox(height: 16),
-            _buildGenreCloud(),
+            _buildRetroGenreSection(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMusicInsightBars() {
-    return Column(
-      children: _musicStats.entries.map((stat) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 100,
-                child: Text(
-                  stat.key.capitalize(),
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: stat.value,
-                    backgroundColor: Colors.grey[800]?.withOpacity(0.3),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).primaryColor.withOpacity(0.8),
-                    ),
-                    minHeight: 6,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 40,
-                child: Text(
-                  '${(stat.value * 100).toInt()}%',
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildGenreCloud() {
+  Widget _buildRetroGenreSection() {
     final topGenres = _topArtists
         .expand((artist) => artist.genres ?? [])
         .fold<Map<String, int>>({}, (map, genre) {
@@ -253,49 +202,29 @@ class _HomePageState extends State<HomePage> {
         .toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[850],
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Your Top Genres',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: topGenres.take(5).map((genre) {
-              final double fontSize = 14 + (genre.value * 2);
-              return Chip(
-                label: Text(
-                  genre.key,
-                  style: TextStyle(fontSize: fontSize),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        ...topGenres.take(3).map((genre) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
                 ),
-                backgroundColor:
-                    Theme.of(context).primaryColor.withOpacity(0.2),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  genre.key,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+            )),
+      ],
     );
   }
 
@@ -306,10 +235,9 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Your Top Artists',
+            'Top Artists',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 16),
           SizedBox(
             height: 150,
             child: ListView.builder(
@@ -365,10 +293,9 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Your Top Tracks',
+            'Top Tracks',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 16),
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -376,7 +303,7 @@ class _HomePageState extends State<HomePage> {
             itemBuilder: (context, index) {
               final track = _topTracks[index];
               return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 2),
                 child: ListTile(
                   leading: ClipRRect(
                     borderRadius: BorderRadius.circular(8),

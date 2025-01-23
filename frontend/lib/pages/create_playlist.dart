@@ -13,10 +13,6 @@ class _CreatePlaylistState extends State<CreatePlaylist> {
   List<String> _playlistTypes = [
     'Based on Recent Plays',
     'Based on Top Artists',
-    'Based on Saved Tracks',
-    'Based on Current Mood',
-    'Discovery Mix',
-    'Decade Mix',
   ];
 
   @override
@@ -49,13 +45,13 @@ class _CreatePlaylistState extends State<CreatePlaylist> {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _playlistTypes.length + 1, // +1 for the header
+        itemCount: _playlistTypes.length + 1,
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 24),
               child: Text(
-                'Create a new playlist',
+                'Create New Playlist',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             );
@@ -65,13 +61,28 @@ class _CreatePlaylistState extends State<CreatePlaylist> {
           return Card(
             margin: const EdgeInsets.only(bottom: 16),
             child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              title: Text(
-                _playlistTypes[typeIndex],
-                style: Theme.of(context).textTheme.titleMedium,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'testData.png',
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                ),
               ),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: () => _createPlaylist(_playlistTypes[typeIndex]),
+              title: Text(
+                'Song Name',
+                style: Theme.of(context).textTheme.titleMedium,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                'Artist Name',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           );
         },

@@ -7,7 +7,7 @@ from flask_cors import CORS
 from sklearn import svm
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 load_dotenv()
 
 # Model data
@@ -102,40 +102,47 @@ def get_recommendation():
 @app.route('/api/options', methods=['GET'])
 def get_options():
     """Return the available options for mood and setting"""
-    return jsonify({
-        "moods": moodKey,
-        "settings": settingKey,
-        "attributes": {
-            "tempo": {
-                "min": 1,
-                "max": 10,
-                "description": "Rate the tempo from 1 (very slow) to 10 (very fast)"
-            },
-            "mood": {
-                "options": moodKey,
-                "description": "Select your current mood"
-            },
-            "length": {
-                "min": 1,
-                "max": 10,
-                "description": "Preferred song length from 1 (short) to 10 (long)"
-            },
-            "explicit": {
-                "options": [0, 1],
-                "description": "Allow explicit content (0 for no, 1 for yes)"
-            },
-            "age": {
-                "min": 1800,
-                "max": 2024,
-                "description": "Preferred music era (year)"
-            },
-            "setting": {
-                "options": settingKey,
-                "description": "Where will you be listening?"
+    try:
+        response = jsonify({
+            "moods": moodKey,
+            "settings": settingKey,
+            "attributes": {
+                "tempo": {
+                    "min": 1,
+                    "max": 10,
+                    "description": "Rate the tempo from 1 (very slow) to 10 (very fast)"
+                },
+                "mood": {
+                    "options": moodKey,
+                    "description": "Select your current mood"
+                },
+                "length": {
+                    "min": 1,
+                    "max": 10,
+                    "description": "Preferred song length from 1 (short) to 10 (long)"
+                },
+                "explicit": {
+                    "options": [0, 1],
+                    "description": "Allow explicit content (0 for no, 1 for yes)"
+                },
+                "age": {
+                    "min": 1800,
+                    "max": 2024,
+                    "description": "Preferred music era (year)"
+                },
+                "setting": {
+                    "options": settingKey,
+                    "description": "Where will you be listening?"
+                }
             }
-        }
-    }), 200
+        })
+        return response, 200
+    except Exception as e:
+        app.logger.error(f"Error in get_options: {str(e)}")
+        return jsonify({"error": "Internal server error", "details": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+    # Update to allow external connections and add logging
+    app.logger.setLevel("INFO")
     app.run(host='0.0.0.0', port=port, debug=True)
