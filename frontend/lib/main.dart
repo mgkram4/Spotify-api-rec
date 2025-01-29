@@ -14,6 +14,7 @@ import 'package:spotfiy_rec/pages/register.dart';
 import 'package:spotfiy_rec/pages/song.dart';
 import 'package:spotfiy_rec/pages/spotify_connect_page.dart';
 import 'package:spotfiy_rec/pages/stats_page.dart';
+import 'package:spotfiy_rec/services/playlist_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +37,15 @@ class MainApp extends StatelessWidget {
         '/register': (context) => const SignUpPage(),
         '/spotify-connect': (context) => SpotifyConnectPage(),
         '/home': (context) => const HomePage(),
-        '/create': (context) => const CreatePlaylist(),
+        '/create': (context) => SwipePlaylistPage(
+              playlistId: '',
+              playlistName: 'New Playlist',
+              playlistImage: 'https://via.placeholder.com/300',
+              creatorName: '',
+              songCount: 0,
+              playlistService: PlaylistService(''),
+              userId: '',
+            ),
         '/profile': (context) => const ProfilePage(),
         '/recommendation': (context) => const RecommendationPage(),
         '/album': (context) {
@@ -67,13 +76,11 @@ class MainApp extends StatelessWidget {
           return PlaylistPage(
             playlistId: args['playlistId'],
             playlistName: args['playlistName'],
-            description: args['description'],
             creatorName: args['creatorName'],
-            imageUrl: args['imageUrl'],
-            followersCount: args['followersCount'],
             songCount: args['songCount'],
-            totalDuration: args['totalDuration'],
-            playlistImage: '',
+            playlistImage: args['imageUrl'],
+            playlistService: PlaylistService(args['userId']),
+            userId: args['userId'],
           );
         },
         '/song': (context) {

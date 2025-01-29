@@ -112,6 +112,36 @@ class PlaylistService {
     }
   }
 
+  Future<Map<String, dynamic>> createPlaylistFromSwipedTracks(
+      List<String> likedTrackIds) async {
+    try {
+      // Create a new playlist
+      final me = await _spotify.me.get();
+      final playlist = await _spotify.playlists.createPlaylist(
+        me.id!,
+        'Your Swiped Mix',
+        description: 'Created from your liked tracks while swiping',
+        public: false,
+      );
+
+      // Add tracks to the playlist
+      await _spotify.playlists.addTracks(
+        likedTrackIds,
+        playlist.id!,
+      );
+
+      return {
+        'name': playlist.name,
+        'id': playlist.id,
+        'tracks': likedTrackIds,
+        'type': 'swiped_tracks',
+      };
+    } catch (e) {
+      print('Error creating playlist from swiped tracks: $e');
+      rethrow;
+    }
+  }
+
   Future<void> savePlaylistToHistory(
     String userId,
     Map<String, dynamic> playlistData,
@@ -127,6 +157,27 @@ class PlaylistService {
       });
     } catch (e) {
       print('Error saving playlist: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> saveSwipedTrack(
+    String userId,
+    String trackId,
+    bool liked,
+  ) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('swiped_tracks')
+          .add({
+        'trackId': trackId,
+        'liked': liked,
+        'swipedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error saving swiped track: $e');
       rethrow;
     }
   }
@@ -177,6 +228,17 @@ class PlaylistService {
     } catch (e) {
       print('Error getting user data: $e');
       yield {};
+    }
+  }
+
+  Future<List<Track>> getPlaylistTracks(String playlistId) async {
+    try {
+      final playlist =
+          await _spotify.playlists.getTracksByPlaylistId(playlistId).all();
+      return playlist.toList();
+    } catch (e) {
+      print('Error getting playlist tracks: $e');
+      rethrow;
     }
   }
 }

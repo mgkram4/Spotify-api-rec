@@ -1,28 +1,99 @@
+import 'package:card_swiper/card_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:spotfiy_rec/models/song.dart';
+import 'package:spotfiy_rec/services/playlist_service.dart';
+import 'package:spotify/spotify.dart' hide Image;
 
-class PlaylistPage extends StatelessWidget {
+class SwipePlaylistPage extends StatefulWidget {
   final String playlistId;
   final String playlistName;
   final String playlistImage;
   final String creatorName;
   final int songCount;
+  final PlaylistService playlistService;
+  final String userId;
 
-  const PlaylistPage({
+  const SwipePlaylistPage({
     Key? key,
     required this.playlistId,
     required this.playlistName,
     required this.playlistImage,
     required this.creatorName,
     required this.songCount,
-    required imageUrl,
-    required description,
-    required followersCount,
-    required totalDuration,
+    required this.playlistService,
+    required this.userId,
   }) : super(key: key);
 
   @override
+  State<SwipePlaylistPage> createState() => _SwipePlaylistPageState();
+}
+
+class _SwipePlaylistPageState extends State<SwipePlaylistPage> {
+  final List<String> likedTrackIds = [];
+  final List<String> dislikedTrackIds = [];
+  bool isLoading = false;
+  List<Track> tracks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaylistTracks();
+  }
+
+  Future<void> _loadPlaylistTracks() async {
+    setState(() => isLoading = true);
+    try {
+      final playlistTracks =
+          await widget.playlistService.getPlaylistTracks(widget.playlistId);
+      setState(() {
+        tracks = playlistTracks;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load tracks: $e')),
+      );
+    }
+  }
+
+  Future<void> _saveSwipedTrack(String trackId, bool liked) async {
+    try {
+      await widget.playlistService.saveSwipedTrack(
+        widget.userId,
+        trackId,
+        liked,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save track preference: $e')),
+      );
+    }
+  }
+
+  Future<void> _createPlaylistFromLikedTracks() async {
+    setState(() => isLoading = true);
+    try {
+      final playlist = await widget.playlistService
+          .createPlaylistFromSwipedTracks(likedTrackIds);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Playlist created successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create playlist: $e')),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -34,7 +105,7 @@ class PlaylistPage extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   Image.network(
-                    playlistImage,
+                    widget.playlistImage,
                     fit: BoxFit.cover,
                   ),
                   Container(
@@ -52,7 +123,7 @@ class PlaylistPage extends StatelessWidget {
                 ],
               ),
               title: Text(
-                playlistName,
+                widget.playlistName,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -68,7 +139,7 @@ class PlaylistPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Created by $creatorName',
+                    'Created by ${widget.creatorName}',
                     style: TextStyle(
                       color: Colors.grey[400],
                       fontSize: 14,
@@ -76,7 +147,7 @@ class PlaylistPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$songCount songs',
+                    '${widget.songCount} songs',
                     style: TextStyle(
                       color: Colors.grey[400],
                       fontSize: 14,
@@ -114,6 +185,31 @@ class PlaylistPage extends StatelessWidget {
               ),
             ),
           ),
+          SliverToBoxAdapter(
+            child: Container(
+              height: 400,
+              padding: const EdgeInsets.all(16.0),
+              child: tracks.isEmpty
+                  ? const Center(child: Text('No tracks available'))
+                  : Swiper(
+                      itemBuilder: (context, index) {
+                        final track = tracks[index];
+                        return _buildSwipeCard(
+                          title: track.name ?? 'Unknown',
+                          artist: track.artists?.first.name ?? 'Unknown Artist',
+                          imageUrl: track.album?.images?.first.url ??
+                              'https://via.placeholder.com/300',
+                        );
+                      },
+                      itemCount: tracks.length,
+                      onIndexChanged: (index) {
+                        final trackId = tracks[index].id!;
+                        likedTrackIds.add(trackId);
+                        _saveSwipedTrack(trackId, true);
+                      },
+                    ),
+            ),
+          ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
@@ -132,10 +228,16 @@ class PlaylistPage extends StatelessWidget {
                   ),
                 );
               },
-              childCount: songCount,
+              childCount: widget.songCount,
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed:
+            likedTrackIds.isEmpty ? null : _createPlaylistFromLikedTracks,
+        label: const Text('Create Playlist'),
+        icon: const Icon(Icons.playlist_add),
       ),
     );
   }
@@ -179,6 +281,55 @@ class PlaylistPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSwipeCard({
+    required String title,
+    required String artist,
+    required String imageUrl,
+  }) {
+    return Card(
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(15)),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  artist,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
