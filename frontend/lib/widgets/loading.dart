@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
-class LoadingSpinner extends StatelessWidget {
+class LottieLoadingSpinner extends StatelessWidget {
   final String? message;
   final Color? color;
   final double size;
+  final Color? backgroundColor;
+  final double opacity;
 
-  const LoadingSpinner({
+  const LottieLoadingSpinner({
     Key? key,
     this.message,
     this.color,
-    this.size = 40.0,
+    this.size = 200.0,
+    this.backgroundColor,
+    this.opacity = 0.5,
   }) : super(key: key);
 
   @override
@@ -21,11 +26,11 @@ class LoadingSpinner extends StatelessWidget {
           SizedBox(
             width: size,
             height: size,
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                color ?? Theme.of(context).primaryColor,
-              ),
-              strokeWidth: 3,
+            child: Lottie.asset(
+              'assets/animations/loading.json',
+              width: size,
+              height: size,
+              fit: BoxFit.contain,
             ),
           ),
           if (message != null) ...[
@@ -34,7 +39,7 @@ class LoadingSpinner extends StatelessWidget {
               message!,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[300],
+                color: color ?? Colors.grey[300],
               ),
               textAlign: TextAlign.center,
             ),
@@ -45,16 +50,24 @@ class LoadingSpinner extends StatelessWidget {
   }
 }
 
-class LoadingOverlay extends StatelessWidget {
+class LottieLoadingOverlay extends StatelessWidget {
   final Widget child;
   final bool isLoading;
   final String? loadingMessage;
+  final Color? backgroundColor;
+  final double opacity;
+  final double spinnerSize;
+  final Color? textColor;
 
-  const LoadingOverlay({
+  const LottieLoadingOverlay({
     Key? key,
     required this.child,
     required this.isLoading,
     this.loadingMessage,
+    this.backgroundColor = Colors.black,
+    this.opacity = 0.5,
+    this.spinnerSize = 200.0,
+    this.textColor,
   }) : super(key: key);
 
   @override
@@ -64,9 +77,12 @@ class LoadingOverlay extends StatelessWidget {
         child,
         if (isLoading)
           Container(
-            color: Colors.black.withOpacity(0.5),
-            child: LoadingSpinner(
+            color: backgroundColor?.withOpacity(opacity) ??
+                Colors.black.withOpacity(opacity),
+            child: LottieLoadingSpinner(
               message: loadingMessage,
+              size: spinnerSize,
+              color: textColor,
             ),
           ),
       ],

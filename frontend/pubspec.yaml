@@ -20,6 +20,7 @@ dependencies:
   intl: ^0.20.1
   fl_chart: ^0.70.1
   card_swiper: ^3.0.1
+  lottie: ^3.0.0
 
 dev_dependencies:
   flutter_test:

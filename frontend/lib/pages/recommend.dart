@@ -137,7 +137,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: LoadingSpinner(message: 'Loading...'),
+        body: LottieLoadingSpinner(message: 'Loading...'),
       );
     }
 
