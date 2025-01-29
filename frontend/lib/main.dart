@@ -8,6 +8,7 @@ import 'package:spotfiy_rec/pages/create.dart';
 import 'package:spotfiy_rec/pages/create_playlist.dart';
 import 'package:spotfiy_rec/pages/home_page.dart';
 import 'package:spotfiy_rec/pages/login_page.dart';
+import 'package:spotfiy_rec/pages/playlistGenForm.dart';
 import 'package:spotfiy_rec/pages/profile.dart';
 import 'package:spotfiy_rec/pages/recommend.dart';
 import 'package:spotfiy_rec/pages/register.dart';
@@ -34,6 +35,7 @@ class MainApp extends StatelessWidget {
       home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginPage(),
+        '/playlistGenForm': (context) => const PlaylistGenerator(),
         '/register': (context) => const SignUpPage(),
         '/spotify-connect': (context) => SpotifyConnectPage(),
         '/home': (context) => const HomePage(),

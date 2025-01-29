@@ -27,7 +27,7 @@ class LottieLoadingSpinner extends StatelessWidget {
             width: size,
             height: size,
             child: Lottie.asset(
-              'assets/animations/loading.json',
+              'assets/loadingState.json',
               width: size,
               height: size,
               fit: BoxFit.contain,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spotfiy_rec/services/auth_service.dart';
 import 'package:spotfiy_rec/services/playlist_service.dart';
+import 'package:spotfiy_rec/widgets/loading.dart';
 import 'package:spotify/spotify.dart' as spotify;
 
 class HomePage extends StatefulWidget {
@@ -102,7 +103,10 @@ class _HomePageState extends State<HomePage> {
           ),
           if (_isLoading)
             const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
+              child: LottieLoadingSpinner(
+                message: 'Loading your music profile...',
+                size: 150.0,
+              ),
             )
           else
             SliverList(
@@ -139,7 +143,7 @@ class _HomePageState extends State<HomePage> {
               Navigator.pushNamed(context, '/recommendation');
               break;
             case 2:
-              Navigator.pushNamed(context, '/create');
+              Navigator.pushNamed(context, '/playlistGenForm');
               break;
           }
         },
