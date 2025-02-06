@@ -1,0 +1,15 @@
+android {
+    // ... other configurations ...
+
+    defaultConfig {
+        // ... other default config ...
+        minSdkVersion 23  // Spotify SDK requires minimum SDK 23
+        // ... other default config ...
+    }
+
+    // Add this if not already present
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+} 

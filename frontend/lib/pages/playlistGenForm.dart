@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spotfiy_rec/widgets/swiper.dart';
 
 class PlaylistGenerator extends StatefulWidget {
   const PlaylistGenerator({Key? key}) : super(key: key);
@@ -47,6 +48,22 @@ class _PlaylistGeneratorState extends State<PlaylistGenerator> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF2A2A2A),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'INFINITE PLAYLIST GENERATOR',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -59,24 +76,6 @@ class _PlaylistGeneratorState extends State<PlaylistGenerator> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border:
-                        Border(bottom: BorderSide(color: Colors.grey[800]!)),
-                  ),
-                  child: const Text(
-                    'INFINITE PLAYLIST GENERATOR',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontFamily: 'monospace',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -226,6 +225,53 @@ class _PlaylistGeneratorState extends State<PlaylistGenerator> {
                       const SizedBox(height: 8),
                       ...recommendedSongs.map((song) => _buildSongTile(song)),
                     ],
+                  ),
+                ),
+
+                // Add Start Swiping Button at the bottom
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFB2F5B2),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (selectedMood != null &&
+                            selectedCategories.isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const Swiper(),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Please select a mood and at least one category',
+                                style: TextStyle(fontFamily: 'monospace'),
+                              ),
+                              backgroundColor: Color(0xFF3A3A3A),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text(
+                        'START SWIPING',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],

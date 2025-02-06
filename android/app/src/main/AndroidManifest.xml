@@ -1,0 +1,18 @@
+<manifest ...>
+    <application ...>
+        <!-- Add this inside the application tag -->
+        <activity
+            android:name="com.spotify.sdk.android.authentication.LoginActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+            
+        <!-- Add this intent filter inside your main activity -->
+        <activity ...>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.example.myapp" android:host="callback" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest> 

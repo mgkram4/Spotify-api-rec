@@ -241,6 +241,24 @@ class PlaylistService {
       rethrow;
     }
   }
+
+  Future<String?> getTrackStreamUrl(String trackUri) async {
+    try {
+      // Get track ID from URI (format: spotify:track:id)
+      final trackId = trackUri.split(':').last;
+
+      // Get track information using the Spotify Web API
+      final track = await _spotify.tracks.get(trackId);
+
+      // Note: Due to Spotify's DRM protection, you cannot get direct streaming URLs
+      // You would need to use the Spotify SDK for actual playback
+      // This is just returning the preview URL as a fallback
+      return track.previewUrl;
+    } catch (e) {
+      print('Error getting track stream URL: $e');
+      return null;
+    }
+  }
 }
 
 // Add this class to your models folder
