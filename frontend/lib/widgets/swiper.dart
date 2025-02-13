@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:spotfiy_rec/widgets/loading.dart';
 import 'package:spotify/spotify.dart' as spotify;
 
 import '../services/auth_service.dart';
 import '../services/playlist_service.dart';
 
 class Swiper extends StatefulWidget {
-  const Swiper({super.key});
+  final String playlistId;
+  final List<dynamic> tracks;
+
+  const Swiper({
+    Key? key,
+    required this.playlistId,
+    required this.tracks,
+  }) : super(key: key);
 
   @override
   State<Swiper> createState() => _SwiperState();
@@ -58,15 +64,27 @@ class _SwiperState extends State<Swiper> {
       setState(() => _isLoading = true);
       final tracksStream = _playlistService.getTopTracksStream();
       await for (final tracks in tracksStream) {
-        setState(() {
-          _tracks = tracks;
-          _isLoading = false;
-        });
-        break; // We only need the first emission
+        if (tracks.isNotEmpty) {
+          // Only set state if we have tracks
+          setState(() {
+            _tracks = tracks;
+            _isLoading = false; // Only set to false when we have tracks
+          });
+          break;
+        }
       }
     } catch (e) {
       print('Error loading tracks: $e');
       setState(() => _isLoading = false);
+      // Show error to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error loading tracks. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -106,160 +124,201 @@ class _SwiperState extends State<Swiper> {
 
   @override
   Widget build(BuildContext context) {
-    return LottieLoadingOverlay(
-      isLoading: _isLoading,
-      loadingMessage: 'Loading your music...',
-      child: Scaffold(
-        backgroundColor: spotifyBlack,
-        appBar: AppBar(
+    return Stack(
+      children: [
+        Scaffold(
           backgroundColor: spotifyBlack,
-          elevation: 0,
-          title: const Text(
-            'Discover Music',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          actions: [
-            TextButton.icon(
-              onPressed: () {
-                // Skip directly to results screen
-                setState(() {
-                  _currentIndex = _tracks.length;
-                });
-              },
-              icon: const Icon(Icons.stop, color: spotifyGreen),
-              label: const Text(
-                'Stop Swiping',
-                style: TextStyle(color: spotifyGreen),
+          appBar: AppBar(
+            backgroundColor: spotifyBlack,
+            elevation: 0,
+            title: const Text(
+              'Discover Music',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // Progress indicator
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Row(
-                children: [
-                  Text(
-                    '${_currentIndex + 1}/${_tracks.length}',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: (_currentIndex + 1) / _tracks.length,
-                      backgroundColor: spotifyGrey,
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(spotifyGreen),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Swipe instructions
-            if (_currentIndex == 0)
-              Container(
-                padding: const EdgeInsets.all(16),
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: spotifyGrey,
-                  borderRadius: BorderRadius.circular(10),
+            actions: [
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _currentIndex = _tracks.length;
+                  });
+                },
+                icon: const Icon(Icons.stop, color: spotifyGreen),
+                label: const Text(
+                  'Stop Swiping',
+                  style: TextStyle(color: spotifyGreen),
                 ),
-                child: Row(
+              ),
+            ],
+          ),
+          body: _currentIndex >= _tracks.length
+              ? _buildResultsScreen()
+              : Column(
                   children: [
-                    const Icon(Icons.info_outline, color: spotifyGreen),
-                    const SizedBox(width: 10),
+                    // Progress indicator
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      child: Row(
+                        children: [
+                          Text(
+                            '${_currentIndex + 1}/${_tracks.length}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: LinearProgressIndicator(
+                              value: (_currentIndex + 1) / _tracks.length,
+                              backgroundColor: spotifyGrey,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  spotifyGreen),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Swipe instructions
+                    if (_currentIndex == 0)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: spotifyGrey,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline, color: spotifyGreen),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Swipe right to like, left to skip',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    // Cards stack
                     Expanded(
-                      child: Text(
-                        'Swipe right to like, left to skip',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 14,
+                      child: Center(
+                        child: Stack(
+                          children: [
+                            // Background cards
+                            if (_currentIndex < _tracks.length - 1)
+                              Transform.translate(
+                                offset: const Offset(0, 10),
+                                child: _buildCard(_currentIndex + 1,
+                                    scale: 0.95, opacity: 0.5),
+                              ),
+                            // Current card
+                            GestureDetector(
+                              onPanUpdate: (details) {
+                                setState(() {
+                                  _position += details.delta;
+                                });
+                              },
+                              onPanEnd: (details) {
+                                final status = _position.dx > 100
+                                    ? 'liked'
+                                    : _position.dx < -100
+                                        ? 'disliked'
+                                        : 'reset';
+
+                                setState(() {
+                                  if (status == 'liked') {
+                                    _likedTracks.add(_tracks[_currentIndex]);
+                                    _currentIndex++;
+                                  } else if (status == 'disliked') {
+                                    _currentIndex++;
+                                  }
+
+                                  _position = Offset.zero;
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 100),
+                                transform: Matrix4.identity()
+                                  ..translate(_position.dx, _position.dy),
+                                child: _buildCard(_currentIndex),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            // Cards stack
-            Expanded(
-              child: Center(
-                child: Stack(
-                  children: [
-                    // Background cards
-                    if (_currentIndex < _tracks.length - 1)
-                      Transform.translate(
-                        offset: const Offset(0, 10),
-                        child: _buildCard(_currentIndex + 1,
-                            scale: 0.95, opacity: 0.5),
-                      ),
-                    // Current card
-                    GestureDetector(
-                      onPanUpdate: (details) {
-                        setState(() {
-                          _position += details.delta;
-                        });
-                      },
-                      onPanEnd: (details) {
-                        final status = _position.dx > 100
-                            ? 'liked'
-                            : _position.dx < -100
-                                ? 'disliked'
-                                : 'reset';
-
-                        setState(() {
-                          if (status == 'liked') {
-                            _likedTracks.add(_tracks[_currentIndex]);
-                            _currentIndex++;
-                          } else if (status == 'disliked') {
-                            _currentIndex++;
-                          }
-
-                          _position = Offset.zero;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 100),
-                        transform: Matrix4.identity()
-                          ..translate(_position.dx, _position.dy),
-                        child: _buildCard(_currentIndex),
+                    // Swipe indicators
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildActionButton(
+                            icon: Icons.close,
+                            color: Colors.red,
+                            isActive: _position.dx < 0,
+                            label: 'Skip',
+                          ),
+                          const SizedBox(width: 40),
+                          _buildActionButton(
+                            icon: Icons.favorite,
+                            color: spotifyGreen,
+                            isActive: _position.dx > 0,
+                            label: 'Like',
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
+        ),
+        if (_isLoading || _tracks.isEmpty) _buildLoadingOverlay(),
+      ],
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    return Container(
+      color: Colors.black54,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: spotifyGrey,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: spotifyGreen),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 50,
+                height: 50,
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(spotifyGreen),
+                  strokeWidth: 3,
+                ),
               ),
-            ),
-            // Swipe indicators
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildActionButton(
-                    icon: Icons.close,
-                    color: Colors.red,
-                    isActive: _position.dx < 0,
-                    label: 'Skip',
-                  ),
-                  const SizedBox(width: 40),
-                  _buildActionButton(
-                    icon: Icons.favorite,
-                    color: spotifyGreen,
-                    isActive: _position.dx > 0,
-                    label: 'Like',
-                  ),
-                ],
+              const SizedBox(height: 16),
+              const Text(
+                'LOADING TRACKS...',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -299,6 +358,11 @@ class _SwiperState extends State<Swiper> {
   }
 
   Widget _buildCard(int index, {double scale = 1.0, double opacity = 1.0}) {
+    // Return an empty container instead of null when index is out of range
+    if (index >= _tracks.length) {
+      return const SizedBox.shrink();
+    }
+
     final track = _tracks[index];
     final isPlaying = _currentlyPlayingIndex == index && _audioPlayer.playing;
 
@@ -434,6 +498,10 @@ class _SwiperState extends State<Swiper> {
   }
 
   Widget _buildResultsScreen() {
+    if (_isLoading || _tracks.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       color: spotifyBlack,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:spotfiy_rec/widgets/custom_button.dart';
 import 'package:spotfiy_rec/widgets/loading.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RecommendationPage extends StatefulWidget {
   const RecommendationPage({Key? key}) : super(key: key);
@@ -80,8 +81,6 @@ class _RecommendationPageState extends State<RecommendationPage> {
           _recommendation = json.decode(response.body)['recommendation'];
           _isLoading = false;
         });
-
-        // Show results dialog
         _showRecommendationDialog();
       } else {
         throw Exception('Failed to get recommendation');
@@ -89,7 +88,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
     } catch (e) {
       print('Error getting recommendation: $e');
       setState(() => _isLoading = false);
-      // Show error message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error getting recommendation')),
+      );
     }
   }
 
@@ -97,20 +98,102 @@ class _RecommendationPageState extends State<RecommendationPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Your Recommendation'),
+        title: Text('Recommended ${_recommendation?['genre']} Songs'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Based on your preferences, here are some recommended songs:',
+                style: TextStyle(color: Colors.grey[400]),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _recommendation?['songs']?.length ?? 0,
+                  itemBuilder: (context, index) {
+                    final song = _recommendation?['songs'][index];
+                    return ListTile(
+                      leading: const Icon(Icons.music_note),
+                      title: Text(song['title'] ?? ''),
+                      subtitle: Text(song['artist'] ?? ''),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Go Back'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _createMixedPlaylist();
+            },
+            child: const Text('Create Playlist'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createMixedPlaylist() async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:5000/api/create-playlist'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'genre': _recommendation?['genre'],
+          'playlist_length': _length.round(),
+          'split_ratio': 0.5, // 50-50 split between Spotify and song bank
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final playlistData = json.decode(response.body);
+        _showPlaylistCreatedDialog(playlistData);
+      } else {
+        throw Exception('Failed to create playlist');
+      }
+    } catch (e) {
+      print('Error creating playlist: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error creating playlist')),
+      );
+    }
+  }
+
+  void _showPlaylistCreatedDialog(Map<String, dynamic> playlistData) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Playlist Created!'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Based on your preferences, we recommend:',
+              'Your mixed playlist has been created with:',
               style: TextStyle(color: Colors.grey[400]),
             ),
             const SizedBox(height: 16),
             Text(
-              _recommendation?['genre'] ?? 'Unknown',
+              '• ${playlistData['spotify_songs_count']} songs from Spotify\n'
+              '• ${playlistData['songbank_songs_count']} songs from your collection',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Genre: ${_recommendation?['genre'] ?? 'Unknown'}',
               style: const TextStyle(
-                fontSize: 24,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -122,11 +205,12 @@ class _RecommendationPageState extends State<RecommendationPage> {
             child: const Text('Close'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Navigate to playlist creation with this genre
+            onPressed: () async {
+              if (playlistData['playlist_url'] != null) {
+                await launchUrl(Uri.parse(playlistData['playlist_url']));
+              }
             },
-            child: const Text('Create Playlist'),
+            child: const Text('Open in Spotify'),
           ),
         ],
       ),
