@@ -10,7 +10,16 @@ class AuthService {
   static const String _redirectUri = 'com.example.myapp://callback';
 
   String? _spotifyToken;
-  String? get spotifyToken => _spotifyToken;
+  DateTime? _tokenExpiry;
+
+  String? get spotifyToken {
+    if (_spotifyToken == null ||
+        _tokenExpiry == null ||
+        DateTime.now().isAfter(_tokenExpiry!)) {
+      _refreshToken();
+    }
+    return _spotifyToken;
+  }
 
   Future<bool> signInWithSpotify() async {
     try {
@@ -51,5 +60,17 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('spotify_token');
     _spotifyToken = null;
+  }
+
+  Future<void> _refreshToken() async {
+    try {
+      // Implement your token refresh logic here
+      // This might involve calling your backend to get a new token
+      // Update _spotifyToken and _tokenExpiry
+    } catch (e) {
+      print('Error refreshing token: $e');
+      _spotifyToken = null;
+      _tokenExpiry = null;
+    }
   }
 }

@@ -6,14 +6,7 @@ import '../services/auth_service.dart';
 import '../services/playlist_service.dart';
 
 class Swiper extends StatefulWidget {
-  final String playlistId;
-  final List<dynamic> tracks;
-
-  const Swiper({
-    Key? key,
-    required this.playlistId,
-    required this.tracks,
-  }) : super(key: key);
+  const Swiper({Key? key}) : super(key: key);
 
   @override
   State<Swiper> createState() => _SwiperState();

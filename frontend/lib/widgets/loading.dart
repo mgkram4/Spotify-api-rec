@@ -22,7 +22,6 @@ class LottieLoadingSpinner extends StatelessWidget {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        
         children: [
           SizedBox(
             width: size,

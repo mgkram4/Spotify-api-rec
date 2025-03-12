@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
+import 'package:spotfiy_rec/services/playlist_service.dart';
 
 class RecommendationService {
   // Get the appropriate base URL based on platform
@@ -166,6 +167,79 @@ class RecommendationService {
       return [recommendation];
     } catch (e) {
       print('Error getting personalized recommendations: $e');
+      rethrow;
+    }
+  }
+
+  // Get genre recommendation and fetch tracks from the corresponding playlist
+  Future<Map<String, dynamic>> getGenreBasedRecommendation({
+    required int tempo,
+    required int mood,
+    required int length,
+    required bool explicit,
+    required int age,
+    required int setting,
+    required String spotifyToken,
+  }) async {
+    try {
+      // First, get the genre recommendation from the backend
+      final recommendation = await getRecommendation(
+        tempo: tempo,
+        mood: mood,
+        length: length,
+        explicit: explicit,
+        age: age,
+        setting: setting,
+      );
+
+      if (!recommendation.containsKey('recommendation') ||
+          !recommendation['recommendation'].containsKey('genre')) {
+        throw Exception('Invalid recommendation response from server');
+      }
+
+      final genre = recommendation['recommendation']['genre'];
+      print('Recommended genre: $genre');
+
+      // Create a playlist service instance
+      final playlistService = PlaylistService(spotifyToken);
+
+      // Get tracks from the genre-specific playlist
+      final tracks = await playlistService.getGenreRecommendations(genre);
+
+      // Convert tracks to a format that can be used by the UI
+      final tracksList = tracks
+          .map((track) => {
+                'id': track.id,
+                'name': track.name,
+                'artists': track.artists
+                    ?.map((artist) => {
+                          'id': artist.id,
+                          'name': artist.name,
+                        })
+                    .toList(),
+                'album': {
+                  'id': track.album?.id,
+                  'name': track.album?.name,
+                  'images': track.album?.images
+                      ?.map((image) => {
+                            'url': image.url,
+                            'width': image.width,
+                            'height': image.height,
+                          })
+                      .toList(),
+                },
+                'preview_url': track.previewUrl,
+                'uri': track.uri,
+              })
+          .toList();
+
+      // Return the recommendation with the tracks
+      return {
+        'recommendation': recommendation['recommendation'],
+        'songs': tracksList,
+      };
+    } catch (e) {
+      print('Error getting genre-based recommendation: $e');
       rethrow;
     }
   }
