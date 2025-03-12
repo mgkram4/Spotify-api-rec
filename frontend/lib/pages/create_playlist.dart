@@ -45,6 +45,10 @@ class _PlaylistPageState extends State<PlaylistPage> {
     try {
       final playlistTracks =
           await widget.playlistService.getPlaylistTracks(widget.playlistId);
+
+      // Shuffle the tracks to get a random selection
+      playlistTracks.shuffle();
+
       setState(() {
         tracks = playlistTracks;
         isLoading = false;
@@ -86,6 +90,96 @@ class _PlaylistPageState extends State<PlaylistPage> {
     } finally {
       setState(() => isLoading = false);
     }
+  }
+
+  void _showRecommendedSongs(String genre) {
+    // Get a subset of tracks that match the genre (in this case, Rap)
+    final genreTracks = tracks.where((track) {
+      // Check if the track's genre matches the requested genre
+      // This depends on how genre information is stored in your Track objects
+      // You might need to adjust this logic based on your data structure
+      return track.artists != null &&
+          track.artists!.isNotEmpty &&
+          track.artists!.any((artist) =>
+              artist.genres?.contains(genre.toLowerCase()) ?? false);
+    }).toList();
+
+    // If no tracks match the genre, use all tracks
+    final songsToShow = genreTracks.isEmpty ? tracks : genreTracks;
+
+    // Shuffle and limit to 7 songs (or fewer if not enough tracks)
+    songsToShow.shuffle();
+    final limitedSongs =
+        songsToShow.length > 7 ? songsToShow.sublist(0, 7) : songsToShow;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Recommended $genre Songs',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Based on your preferences, here are some recommended songs:',
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: limitedSongs.length,
+              itemBuilder: (context, index) {
+                final track = limitedSongs[index];
+                return ListTile(
+                  leading: const Icon(Icons.music_note, color: Colors.white),
+                  title: Text(
+                    track.name ?? 'Unknown Song',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    track.artists?.first.name ?? 'Unknown Artist',
+                    style: TextStyle(color: Colors.grey[400]),
+                  ),
+                  onTap: () {
+                    // Add the track to liked tracks
+                    if (track.id != null) {
+                      likedTrackIds.add(track.id!);
+                      _saveSwipedTrack(track.id!, true);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                'Added ${track.name} to your liked tracks')),
+                      );
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              child:
+                  const Text('Close', style: TextStyle(color: Colors.purple)),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -177,6 +271,14 @@ class _PlaylistPageState extends State<PlaylistPage> {
                         label: 'Like',
                         onTap: () {
                           // TODO: Implement like
+                        },
+                      ),
+                      _buildActionButton(
+                        icon: Icons.recommend,
+                        label: 'Recommend',
+                        onTap: () {
+                          // Show recommended rap songs
+                          _showRecommendedSongs('Rap');
                         },
                       ),
                     ],

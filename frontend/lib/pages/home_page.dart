@@ -111,9 +111,11 @@ class _HomePageState extends State<HomePage> {
           else
             SliverList(
               delegate: SliverChildListDelegate([
+                _buildWelcomeHeader(),
                 _buildQuickStats(),
                 _buildTopArtistsSection(),
                 _buildTopTracksSection(),
+                const SizedBox(height: 20), // Add bottom padding
               ]),
             ),
         ],
@@ -151,16 +153,59 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildWelcomeHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome Back!',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Here\'s your personalized music profile',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[400],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Divider(color: Colors.grey[800], thickness: 1),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuickStats() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.grey[850]?.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.grey[850]!.withOpacity(0.9),
+              Colors.grey[900]!.withOpacity(0.9),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
           border: Border.all(
-            color: Colors.white.withOpacity(0.2),
+            color: Theme.of(context).primaryColor.withOpacity(0.3),
             width: 2,
           ),
         ),
@@ -173,17 +218,18 @@ class _HomePageState extends State<HomePage> {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withOpacity(0.3),
                     width: 2,
                   ),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 'TOP GENRES',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 2,
+                  color: Theme.of(context).primaryColor,
                 ),
               ),
             ),
@@ -211,20 +257,25 @@ class _HomePageState extends State<HomePage> {
       children: [
         const SizedBox(height: 8),
         ...topGenres.take(3).map((genre) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: 6),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                  horizontal: 16,
+                  vertical: 12,
                 ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).primaryColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(context).primaryColor.withOpacity(0.3),
+                    width: 1,
+                  ),
                 ),
                 child: Text(
-                  genre.key,
-                  style: const TextStyle(fontSize: 16),
+                  genre.key.capitalize(),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ),
             )),
@@ -234,16 +285,27 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildTopArtistsSection() {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Top Artists',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              const Icon(Icons.people, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Top Artists',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 150,
+            height: 160,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _topArtists.length,
@@ -260,23 +322,39 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                   child: Container(
-                    width: 120,
+                    width: 130,
                     margin: const EdgeInsets.only(right: 16),
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 45,
-                          backgroundImage: NetworkImage(
-                            artist.images?.first.url ??
-                                'https://via.placeholder.com/90',
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundImage: NetworkImage(
+                              artist.images?.first.url ??
+                                  'https://via.placeholder.com/100',
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(
                           artist.name ?? 'Unknown Artist',
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
@@ -292,67 +370,99 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildTopTracksSection() {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Top Tracks',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              const Icon(Icons.music_note, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Top Tracks',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+            ],
           ),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _topTracks.length,
-            itemBuilder: (context, index) {
-              final track = _topTracks[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: ListTile(
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      track.album?.images?.first.url ??
-                          'https://via.placeholder.com/56',
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[850]?.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _topTracks.length,
+              itemBuilder: (context, index) {
+                final track = _topTracks[index];
+                return Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  child: ListTile(
+                    leading: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          track.album?.images?.first.url ??
+                              'https://via.placeholder.com/56',
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
-                  ),
-                  title: Text(
-                    track.name ?? 'Unknown',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    track.artists?.map((a) => a.name).join(', ') ??
-                        'Unknown Artist',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.more_vert),
-                    onPressed: () {
-                      // TODO: Show options menu
+                    title: Text(
+                      track.name ?? 'Unknown',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      track.artists?.map((a) => a.name).join(', ') ??
+                          'Unknown Artist',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.grey[400]),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      onPressed: () {
+                        // TODO: Show options menu
+                      },
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/song',
+                        arguments: {
+                          'songId': track.id,
+                          'title': track.name,
+                          'artist': track.artists?.first.name,
+                          'album': track.album?.name,
+                          'imageUrl': track.album?.images?.first.url,
+                          'duration': track.duration,
+                        },
+                      );
                     },
                   ),
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/song',
-                      arguments: {
-                        'songId': track.id,
-                        'title': track.name,
-                        'artist': track.artists?.first.name,
-                        'album': track.album?.name,
-                        'imageUrl': track.album?.images?.first.url,
-                        'duration': track.duration,
-                      },
-                    );
-                  },
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ],
       ),

@@ -23,15 +23,13 @@ class _PlaylistGeneratorState extends State<PlaylistGenerator> {
   ];
 
   final List<String> musicCategories = [
-    'EDM',
-    'TRAP',
-    'RAP',
-    'POP',
-    'SAD RAP',
-    'ATL RAP',
-    'R&B',
-    'JAZZ',
-    'CLASSICAL'
+    'rock',
+    'classical',
+    'edm',
+    'pop',
+    'jazz',
+    'trap',
+    'rap'
   ];
 
   final List<Map<String, String>> recentSongs = [
@@ -248,7 +246,10 @@ class _PlaylistGeneratorState extends State<PlaylistGenerator> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const Swiper(),
+                              builder: (context) => Swiper(
+                                mood: selectedMood,
+                                categories: selectedCategories.toList(),
+                              ),
                             ),
                           );
                         } else {

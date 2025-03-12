@@ -6,7 +6,14 @@ import '../services/auth_service.dart';
 import '../services/playlist_service.dart';
 
 class Swiper extends StatefulWidget {
-  const Swiper({Key? key}) : super(key: key);
+  final String? mood;
+  final List<String>? categories;
+
+  const Swiper({
+    Key? key,
+    this.mood,
+    this.categories,
+  }) : super(key: key);
 
   @override
   State<Swiper> createState() => _SwiperState();
@@ -45,35 +52,120 @@ class _SwiperState extends State<Swiper> {
 
   Future<void> _initializeSpotify() async {
     final authService = AuthService();
-    final token = authService.spotifyToken;
-    if (token != null) {
-      _playlistService = PlaylistService(token);
-      await _loadTracks();
+    var token = authService.spotifyToken;
+
+    if (token == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Not logged in to Spotify. Please log in first.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
     }
+
+    _playlistService = PlaylistService(token);
+    await _loadTracks();
   }
 
   Future<void> _loadTracks() async {
     try {
       setState(() => _isLoading = true);
-      final tracksStream = _playlistService.getTopTracksStream();
-      await for (final tracks in tracksStream) {
+
+      print('Selected mood: ${widget.mood}');
+      print('Selected categories: ${widget.categories}');
+
+      // If we have categories, use the first one as the genre
+      if (widget.categories != null && widget.categories!.isNotEmpty) {
+        final primaryGenre = widget.categories!.first.toLowerCase();
+        print('Using primary genre: $primaryGenre');
+
+        try {
+          // Try to get recommendations based on the selected genre
+          print(
+              'Attempting to get mixed recommendations for genre: $primaryGenre');
+          final tracksStream = _playlistService.getMixedRecommendationsStream(
+            genre: primaryGenre,
+            limit: 20,
+          );
+
+          await for (final tracks in tracksStream) {
+            if (tracks.isNotEmpty) {
+              print(
+                  'Successfully got ${tracks.length} tracks from mixed recommendations');
+              setState(() {
+                _tracks = tracks;
+                _isLoading = false;
+              });
+              return; // Exit if we got tracks
+            }
+          }
+          print(
+              'Mixed recommendations stream completed but no tracks were returned');
+        } catch (e) {
+          print('Error with mixed recommendations: $e');
+          // Continue to fallback
+        }
+
+        // Fallback to genre recommendations
+        try {
+          print('Attempting to get genre recommendations for: $primaryGenre');
+          final genreTracks =
+              await _playlistService.getGenreRecommendations(primaryGenre);
+          if (genreTracks.isNotEmpty) {
+            print(
+                'Successfully got ${genreTracks.length} tracks from genre recommendations');
+            setState(() {
+              _tracks = genreTracks;
+              _isLoading = false;
+            });
+            return; // Exit if we got tracks
+          }
+          print('Genre recommendations returned no tracks');
+        } catch (e) {
+          print('Error with genre recommendations: $e');
+          // Continue to next fallback
+        }
+      } else {
+        print('No categories selected, skipping genre-based recommendations');
+      }
+
+      // If we get here, either we had no categories or the genre-based methods failed
+      // Fallback to top tracks
+      print('Falling back to top tracks');
+      final topTracksStream = _playlistService.getTopTracksStream();
+      await for (final tracks in topTracksStream) {
         if (tracks.isNotEmpty) {
-          // Only set state if we have tracks
+          print('Successfully got ${tracks.length} tracks from top tracks');
           setState(() {
             _tracks = tracks;
-            _isLoading = false; // Only set to false when we have tracks
+            _isLoading = false;
           });
-          break;
+          return;
         }
+      }
+      print('Top tracks stream completed but no tracks were returned');
+
+      // If we get here, all methods failed
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not load any tracks. Please try again later.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       print('Error loading tracks: $e');
       setState(() => _isLoading = false);
-      // Show error to user
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error loading tracks. Please try again.'),
+          SnackBar(
+            content: Text('Error loading tracks: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );

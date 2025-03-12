@@ -73,4 +73,30 @@ class AuthService {
       _tokenExpiry = null;
     }
   }
+
+  Future<String?> refreshToken() async {
+    try {
+      // Implement token refresh logic here based on your auth flow
+      // This is a placeholder - you'll need to implement the actual refresh
+      // using your OAuth provider's refresh token mechanism
+
+      // Example with oauth2 package:
+      // final client = await oauth2.Client.refreshCredentials(
+      //   credentials,
+      //   Uri.parse('https://accounts.spotify.com/api/token'),
+      //   identifier: clientId,
+      //   secret: clientSecret,
+      // );
+      // final newToken = client.credentials.accessToken;
+      // await _saveToken(newToken);
+      // return newToken;
+
+      print("Attempting to refresh token...");
+      // For now, return null to indicate refresh failed
+      return null;
+    } catch (e) {
+      print('Error refreshing token: $e');
+      return null;
+    }
+  }
 }
