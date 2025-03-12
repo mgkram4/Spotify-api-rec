@@ -7,12 +7,14 @@ import '../services/playlist_service.dart';
 
 class Swiper extends StatefulWidget {
   final String? mood;
-  final List<String>? categories;
+  final List<String> categories;
+  final List<String>? trackIds;
 
   const Swiper({
     Key? key,
     this.mood,
-    this.categories,
+    required this.categories,
+    this.trackIds,
   }) : super(key: key);
 
   @override
@@ -78,8 +80,8 @@ class _SwiperState extends State<Swiper> {
       print('Selected categories: ${widget.categories}');
 
       // If we have categories, use the first one as the genre
-      if (widget.categories != null && widget.categories!.isNotEmpty) {
-        final primaryGenre = widget.categories!.first.toLowerCase();
+      if (widget.categories.isNotEmpty) {
+        final primaryGenre = widget.categories.first.toLowerCase();
         print('Using primary genre: $primaryGenre');
 
         try {

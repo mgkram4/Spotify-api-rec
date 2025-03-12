@@ -308,12 +308,12 @@ class PlaylistService {
       print('Found playlist ID for genre $genreLower: $playlistId');
 
       // Calculate how many tracks we want from each source
-      // (40% genre playlist, 30% top hits, 15% recent tracks, 15% recommendations)
+      // (50% genre playlist, 30% top hits, 5% recent tracks, 15% recommendations)
       final playlistTracksCount =
-          (limit * 0.4).round(); // 40% from genre playlist
+          (limit * 0.6).round(); // 40% from genre playlist
       final topTracksCount = (limit * 0.3).round(); // 30% from top tracks
       final recentTracksCount =
-          (limit * 0.15).round(); // 15% from recent tracks
+          (limit * 0.05).round(); // 15% from recent tracks
       final recommendationsCount =
           limit - playlistTracksCount - topTracksCount - recentTracksCount;
 
