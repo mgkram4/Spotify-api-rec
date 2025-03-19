@@ -25,13 +25,13 @@ song_data = [
 ]
 
 song_title = {
-    1: "Rap",
-    2: "Trap",
-    3: "Jazz",
-    4: "Pop",
-    5: "EDM",
-    6: "Classical",
-    7: "Rock"
+    1: "rap",
+    2: "trap",
+    3: "jazz",
+    4: "pop",
+    5: "edm",
+    6: "classical",
+    7: "rock"
 }
 
 attribute_names = ["Tempo", "Mood", "Length", "Explicit", "Age", "Setting"]

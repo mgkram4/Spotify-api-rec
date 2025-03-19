@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spotfiy_rec/services/auth_service.dart';
 import 'package:spotfiy_rec/services/playlist_service.dart';
 import 'package:spotfiy_rec/services/recommendation_service.dart';
 import 'package:spotify/spotify.dart' as spotify;
@@ -43,10 +44,30 @@ class _RecommendationPageState extends State<RecommendationPage> {
   }
 
   Future<String> _getSpotifyToken() async {
-    // Implement your method to get the token from storage or auth service
-    // For example: return SpotifyAuthService().getAccessToken();
-    // This is a placeholder
-    return '';
+    // Use the AuthService to get the token instead of returning an empty string
+    final authService = AuthService();
+    final token = authService.spotifyToken;
+
+    if (token == null) {
+      // If token is null, try to refresh it
+      final refreshedToken = await authService.refreshToken();
+      if (refreshedToken != null) {
+        return refreshedToken;
+      }
+
+      // If refresh failed and we're in this situation, there might be an issue
+      // with the auth state - we could redirect to login or handle differently
+      print('Warning: No valid Spotify token available');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content:
+                Text('Spotify authentication needed. Please log in again.')),
+      );
+      // Return a token anyway to avoid null errors, though requests will fail
+      return '';
+    }
+
+    return token;
   }
 
   Future<void> _loadOptions() async {
@@ -96,12 +117,18 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
       final genre = result['recommendation']['genre'];
 
-      // For demonstration, we'll create sample tracks based on genre
-      final sampleTracks = _createSampleTracks(genre, 10);
+      // Get actual tracks from playlist service using the genre
+      final tracks = await _playlistService.getGenreRecommendations(genre);
 
-      setState(() => _isLoading = false);
+      // Take only the first 5 tracks
+      final limitedTracks = tracks.length > 5 ? tracks.sublist(0, 5) : tracks;
 
-      _showRecommendationDialog(genre, sampleTracks);
+      setState(() {
+        _recommendedTracks = limitedTracks;
+        _isLoading = false;
+      });
+
+      _showRecommendationDialog(genre, limitedTracks);
     } catch (e) {
       print('Error getting recommendation: $e');
       setState(() => _isLoading = false);
@@ -111,99 +138,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
     }
   }
 
-  List<Map<String, String>> _createSampleTracks(String genre, int count) {
-    // Create some realistic sample tracks based on the genre
-    final genreArtists = {
-      'Rock': ['Foo Fighters', 'Led Zeppelin', 'AC/DC', 'Queen', 'Nirvana'],
-      'Pop': [
-        'Taylor Swift',
-        'Ed Sheeran',
-        'Ariana Grande',
-        'Justin Bieber',
-        'Dua Lipa'
-      ],
-      'Hip Hop': ['Kendrick Lamar', 'Drake', 'J. Cole', 'Kanye West', 'Eminem'],
-      'EDM': [
-        'Calvin Harris',
-        'Avicii',
-        'Martin Garrix',
-        'Skrillex',
-        'Marshmello'
-      ],
-      'Jazz': [
-        'Miles Davis',
-        'John Coltrane',
-        'Ella Fitzgerald',
-        'Louis Armstrong',
-        'Charlie Parker'
-      ],
-      'Classical': ['Mozart', 'Beethoven', 'Bach', 'Chopin', 'Tchaikovsky'],
-      'R&B': ['The Weeknd', 'SZA', 'Frank Ocean', 'H.E.R.', 'Daniel Caesar'],
-    };
-
-    final genreSongs = {
-      'Rock': [
-        'Stairway to Heaven',
-        'Bohemian Rhapsody',
-        'Sweet Child O\' Mine',
-        'Back in Black',
-        'Smells Like Teen Spirit'
-      ],
-      'Pop': [
-        'Shake It Off',
-        'Shape of You',
-        'thank u, next',
-        'Sorry',
-        'Don\'t Start Now'
-      ],
-      'Hip Hop': [
-        'HUMBLE.',
-        'God\'s Plan',
-        'Middle Child',
-        'Stronger',
-        'Lose Yourself'
-      ],
-      'EDM': ['Summer', 'Wake Me Up', 'Animals', 'Bangarang', 'Happier'],
-      'Jazz': [
-        'So What',
-        'Giant Steps',
-        'Summertime',
-        'What a Wonderful World',
-        'Take Five'
-      ],
-      'Classical': [
-        'Symphony No. 5',
-        'Für Elise',
-        'Air on the G String',
-        'Nocturne Op. 9 No. 2',
-        'Swan Lake'
-      ],
-      'R&B': [
-        'Blinding Lights',
-        'Good Days',
-        'Thinkin Bout You',
-        'Focus',
-        'Best Part'
-      ],
-    };
-
-    // Default to Pop if the genre is not in our map
-    final artists = genreArtists[genre] ?? genreArtists['Pop']!;
-    final songs = genreSongs[genre] ?? genreSongs['Pop']!;
-
-    return List.generate(count, (index) {
-      final artistIndex = index % artists.length;
-      final songIndex = index % songs.length;
-      return {
-        'title':
-            '${songs[songIndex]} ${index > songs.length ? '${(index / songs.length).floor() + 1}' : ''}',
-        'artist': artists[artistIndex],
-      };
-    });
-  }
-
-  void _showRecommendationDialog(
-      String genre, List<Map<String, String>> tracks) {
+  void _showRecommendationDialog(String genre, List<spotify.Track> tracks) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -226,9 +161,31 @@ class _RecommendationPageState extends State<RecommendationPage> {
                   itemBuilder: (context, index) {
                     final track = tracks[index];
                     return ListTile(
-                      leading: const Icon(Icons.music_note),
-                      title: Text(track['title'] ?? ''),
-                      subtitle: Text(track['artist'] ?? ''),
+                      leading: track.album?.images != null &&
+                              track.album!.images!.isNotEmpty
+                          ? Image.network(
+                              track.album!.images!.first.url!,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.music_note);
+                              },
+                            )
+                          : const Icon(Icons.music_note),
+                      title: Text(track.name ?? 'Unknown Track'),
+                      subtitle: Text(
+                          track.artists?.map((a) => a.name).join(', ') ??
+                              'Unknown Artist'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.play_arrow),
+                        onPressed: () {
+                          // For future implementation - play the track
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Playing ${track.name}')),
+                          );
+                        },
+                      ),
                     );
                   },
                 ),
@@ -240,6 +197,17 @@ class _RecommendationPageState extends State<RecommendationPage> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              // For future implementation - save playlist
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Playlist saved (not implemented)')),
+              );
+              Navigator.pop(context);
+            },
+            child: const Text('Save Playlist'),
           ),
         ],
       ),
