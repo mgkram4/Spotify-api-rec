@@ -310,7 +310,7 @@ class PlaylistService {
       // Calculate how many tracks we want from each source
       // (50% genre playlist, 30% top hits, 5% recent tracks, 15% recommendations)
       final playlistTracksCount =
-          (limit * 0.6).round(); // 40% from genre playlist
+          (limit * 0.5).round(); // 40% from genre playlist
       final topTracksCount = (limit * 0.3).round(); // 30% from top tracks
       final recentTracksCount =
           (limit * 0.05).round(); // 15% from recent tracks
