@@ -123,24 +123,11 @@ class _SwiperState extends State<Swiper> {
             if (tracks.isNotEmpty) {
               print(
                   'Successfully got ${tracks.length} tracks from mixed recommendations');
-              // Filter out tracks without preview URLs
-              final tracksWithPreviews =
-                  tracks.where((track) => track.previewUrl != null).toList();
-
-              if (tracksWithPreviews.isNotEmpty) {
-                setState(() {
-                  _tracks = tracksWithPreviews;
-                  _isLoading = false;
-                });
-                return;
-              } else {
-                print(
-                    'No tracks with previews found, showing all tracks anyway');
-                setState(() {
-                  _tracks = tracks;
-                  _isLoading = false;
-                });
-              }
+              setState(() {
+                _tracks = tracks;
+                _isLoading = false;
+              });
+              return;
             }
           }
           print(
@@ -158,67 +145,26 @@ class _SwiperState extends State<Swiper> {
           if (genreTracks.isNotEmpty) {
             print(
                 'Successfully got ${genreTracks.length} tracks from genre recommendations');
-            // Filter out tracks without preview URLs
-            final tracksWithPreviews =
-                genreTracks.where((track) => track.previewUrl != null).toList();
-
-            if (tracksWithPreviews.isNotEmpty) {
-              setState(() {
-                _tracks = tracksWithPreviews;
-                _isLoading = false;
-              });
-              return;
-            } else {
-              print('No tracks with previews found, showing all tracks anyway');
-              setState(() {
-                _tracks = genreTracks;
-                _isLoading = false;
-              });
-            }
+            setState(() {
+              _tracks = genreTracks;
+              _isLoading = false;
+            });
+            return;
           }
           print('Genre recommendations returned no tracks');
         } catch (e) {
           print('Error with genre recommendations: $e');
-          // Continue to next fallback
         }
       } else {
-        print('No categories selected, skipping genre-based recommendations');
+        print('No categories selected');
       }
 
-      // If we get here, either we had no categories or the genre-based methods failed
-      // Fallback to top tracks
-      print('Falling back to top tracks');
-      final topTracksStream = _playlistService.getTopTracksStream();
-      await for (final tracks in topTracksStream) {
-        if (tracks.isNotEmpty) {
-          print('Successfully got ${tracks.length} tracks from top tracks');
-          // Filter out tracks without preview URLs
-          final tracksWithPreviews =
-              tracks.where((track) => track.previewUrl != null).toList();
-
-          if (tracksWithPreviews.isNotEmpty) {
-            setState(() {
-              _tracks = tracksWithPreviews;
-              _isLoading = false;
-            });
-            return;
-          } else {
-            print('No tracks with previews found, showing all tracks anyway');
-            setState(() {
-              _tracks = tracks;
-              _isLoading = false;
-            });
-          }
-        }
-      }
-      print('Top tracks stream completed but no tracks were returned');
-
-      // If we get here, all methods failed
+      // If we get here and still have no tracks, show an error
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not load any tracks. Please try again later.'),
+            content: Text('Could not load any tracks. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -241,75 +187,32 @@ class _SwiperState extends State<Swiper> {
   Future<void> _playTrack(spotify.Track track, int index) async {
     try {
       // If already playing this track, pause it
-      if (_currentlyPlayingIndex == index && _audioPlayer.playing) {
-        await _audioPlayer.pause();
-        setState(() {});
-        return;
-      }
-
-      // Get preview URL from the track
-      final previewUrl = track.previewUrl;
-      print('Attempting to play track: ${track.name} (${track.id})');
-      print('Preview URL: $previewUrl');
-
-      if (previewUrl == null || previewUrl.isEmpty) {
-        print('No preview URL available - trying YouTube instead');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No preview available - trying YouTube instead...'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        await _playFromYouTube(track, index);
-        return;
-      }
-
-      // Stop current playback if different track
-      if (_currentlyPlayingIndex != index) {
-        await _audioPlayer.stop();
-
-        // Set the URL and add error handling
-        try {
-          print('Setting URL: $previewUrl');
-          await _audioPlayer.setUrl(previewUrl);
-        } catch (urlError) {
-          print('Error setting URL: $urlError');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content:
-                  Text('Preview URL is invalid - trying YouTube instead...'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 2),
-            ),
-          );
-          await _playFromYouTube(track, index);
+      if (_currentlyPlayingIndex == index) {
+        if (_isFullSongPlaying) {
+          if (_youtubeController != null &&
+              _youtubeController!.value.isPlaying) {
+            _youtubeController!.pause();
+          }
+          setState(() {});
+          return;
+        } else if (_audioPlayer.playing) {
+          await _audioPlayer.pause();
+          setState(() {});
           return;
         }
       }
 
-      try {
-        print('Playing preview...');
-        await _audioPlayer.play();
-        setState(() {
-          _currentlyPlayingIndex = index;
-        });
-      } catch (playError) {
-        print('Error playing preview: $playError');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to play preview - trying YouTube instead...'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        await _playFromYouTube(track, index);
-      }
+      // Default to YouTube instead of preview URL
+      print('Attempting to play track: ${track.name} (${track.id})');
+      print('Using YouTube by default');
+      await _playFromYouTube(track, index);
+
+      // Remove the fallback to preview URL logic completely
     } catch (e) {
       print('Error in playTrack function: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Unable to play preview: ${e.toString()}'),
+          content: Text('Unable to play track: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
