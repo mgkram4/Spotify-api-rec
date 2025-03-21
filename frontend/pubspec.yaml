@@ -24,6 +24,8 @@ dependencies:
   just_audio: ^0.9.46
   spotify_sdk: ^2.3.1
   url_launcher: ^6.3.1
+  youtube_explode_dart:
+  youtube_player_flutter:
 
 dev_dependencies:
   flutter_test:

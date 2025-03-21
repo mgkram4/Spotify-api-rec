@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:spotify/spotify.dart' as spotify;
+import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 import '../services/auth_service.dart';
 import '../services/playlist_service.dart';
@@ -40,15 +42,39 @@ class _SwiperState extends State<Swiper> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   int? _currentlyPlayingIndex;
 
+  bool _isSearchingYouTube = false;
+  bool _isFullSongPlaying = false;
+
+  final _yt = YoutubeExplode();
+  YoutubePlayerController? _youtubeController;
+
   @override
   void initState() {
     super.initState();
     _initializeSpotify();
+
+    // Add error handling for audio player
+    _audioPlayer.playbackEventStream.listen(
+      (event) {},
+      onError: (Object e, StackTrace st) {
+        print('Audio player error: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Audio playback error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _youtubeController?.dispose();
+    _yt.close();
     super.dispose();
   }
 
@@ -97,11 +123,24 @@ class _SwiperState extends State<Swiper> {
             if (tracks.isNotEmpty) {
               print(
                   'Successfully got ${tracks.length} tracks from mixed recommendations');
-              setState(() {
-                _tracks = tracks;
-                _isLoading = false;
-              });
-              return; // Exit if we got tracks
+              // Filter out tracks without preview URLs
+              final tracksWithPreviews =
+                  tracks.where((track) => track.previewUrl != null).toList();
+
+              if (tracksWithPreviews.isNotEmpty) {
+                setState(() {
+                  _tracks = tracksWithPreviews;
+                  _isLoading = false;
+                });
+                return;
+              } else {
+                print(
+                    'No tracks with previews found, showing all tracks anyway');
+                setState(() {
+                  _tracks = tracks;
+                  _isLoading = false;
+                });
+              }
             }
           }
           print(
@@ -119,11 +158,23 @@ class _SwiperState extends State<Swiper> {
           if (genreTracks.isNotEmpty) {
             print(
                 'Successfully got ${genreTracks.length} tracks from genre recommendations');
-            setState(() {
-              _tracks = genreTracks;
-              _isLoading = false;
-            });
-            return; // Exit if we got tracks
+            // Filter out tracks without preview URLs
+            final tracksWithPreviews =
+                genreTracks.where((track) => track.previewUrl != null).toList();
+
+            if (tracksWithPreviews.isNotEmpty) {
+              setState(() {
+                _tracks = tracksWithPreviews;
+                _isLoading = false;
+              });
+              return;
+            } else {
+              print('No tracks with previews found, showing all tracks anyway');
+              setState(() {
+                _tracks = genreTracks;
+                _isLoading = false;
+              });
+            }
           }
           print('Genre recommendations returned no tracks');
         } catch (e) {
@@ -141,11 +192,23 @@ class _SwiperState extends State<Swiper> {
       await for (final tracks in topTracksStream) {
         if (tracks.isNotEmpty) {
           print('Successfully got ${tracks.length} tracks from top tracks');
-          setState(() {
-            _tracks = tracks;
-            _isLoading = false;
-          });
-          return;
+          // Filter out tracks without preview URLs
+          final tracksWithPreviews =
+              tracks.where((track) => track.previewUrl != null).toList();
+
+          if (tracksWithPreviews.isNotEmpty) {
+            setState(() {
+              _tracks = tracksWithPreviews;
+              _isLoading = false;
+            });
+            return;
+          } else {
+            print('No tracks with previews found, showing all tracks anyway');
+            setState(() {
+              _tracks = tracks;
+              _isLoading = false;
+            });
+          }
         }
       }
       print('Top tracks stream completed but no tracks were returned');
@@ -177,6 +240,7 @@ class _SwiperState extends State<Swiper> {
 
   Future<void> _playTrack(spotify.Track track, int index) async {
     try {
+      // If already playing this track, pause it
       if (_currentlyPlayingIndex == index && _audioPlayer.playing) {
         await _audioPlayer.pause();
         setState(() {});
@@ -185,27 +249,194 @@ class _SwiperState extends State<Swiper> {
 
       // Get preview URL from the track
       final previewUrl = track.previewUrl;
-      if (previewUrl == null) {
-        throw Exception('No preview URL available for this track');
+      print('Attempting to play track: ${track.name} (${track.id})');
+      print('Preview URL: $previewUrl');
+
+      if (previewUrl == null || previewUrl.isEmpty) {
+        print('No preview URL available - trying YouTube instead');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No preview available - trying YouTube instead...'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        await _playFromYouTube(track, index);
+        return;
       }
 
+      // Stop current playback if different track
       if (_currentlyPlayingIndex != index) {
         await _audioPlayer.stop();
-        await _audioPlayer.setUrl(previewUrl);
+
+        // Set the URL and add error handling
+        try {
+          print('Setting URL: $previewUrl');
+          await _audioPlayer.setUrl(previewUrl);
+        } catch (urlError) {
+          print('Error setting URL: $urlError');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Preview URL is invalid - trying YouTube instead...'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          await _playFromYouTube(track, index);
+          return;
+        }
       }
 
-      await _audioPlayer.play();
-      setState(() {
-        _currentlyPlayingIndex = index;
-      });
+      try {
+        print('Playing preview...');
+        await _audioPlayer.play();
+        setState(() {
+          _currentlyPlayingIndex = index;
+        });
+      } catch (playError) {
+        print('Error playing preview: $playError');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to play preview - trying YouTube instead...'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        await _playFromYouTube(track, index);
+      }
     } catch (e) {
-      print('Error playing track: $e');
+      print('Error in playTrack function: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Unable to play preview: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  Future<void> _playFromYouTube(spotify.Track track, int index) async {
+    setState(() {
+      _isSearchingYouTube = true;
+    });
+
+    try {
+      // Stop preview if playing
+      if (_audioPlayer.playing) {
+        await _audioPlayer.pause();
+      }
+
+      // If already playing a YouTube video, dispose of the controller
+      if (_youtubeController != null) {
+        _youtubeController!.pause();
+        _youtubeController!.dispose();
+        _youtubeController = null;
+      }
+
+      // If clicking on the same track that's playing, just stop it
+      if (_isFullSongPlaying && _currentlyPlayingIndex == index) {
+        setState(() {
+          _isFullSongPlaying = false;
+          _currentlyPlayingIndex = null;
+        });
+        return;
+      }
+
+      // Construct search query from track details
+      final searchQuery =
+          '${track.name} ${track.artists?.map((a) => a.name).join(" ")}';
+      print('Searching YouTube for: $searchQuery');
+
+      // Search YouTube
+      final searchResults = await _yt.search.search(searchQuery);
+      if (searchResults.isEmpty) {
+        throw Exception('No YouTube results found for this track');
+      }
+
+      // Get the first video result
+      final videoId = searchResults.first.id.value;
+      print('Found YouTube video: $videoId');
+
+      // Create and initialize YouTube player controller
+      _youtubeController = YoutubePlayerController(
+        initialVideoId: videoId,
+        flags: const YoutubePlayerFlags(
+          autoPlay: true,
+          mute: false,
+          disableDragSeek: false,
+          loop: false,
+          enableCaption: false,
+        ),
+      );
+
+      setState(() {
+        _isFullSongPlaying = true;
+        _currentlyPlayingIndex = index;
+        _isSearchingYouTube = false;
+      });
+
+      // Add this to show the YouTube player in the UI
+      _showYouTubePlayer();
+    } catch (e) {
+      print('YouTube fallback failed: $e');
+      setState(() {
+        _isSearchingYouTube = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No audio available for this track: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Add this new method to display the YouTube player in the UI
+  void _showYouTubePlayer() {
+    if (_youtubeController != null) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: spotifyGrey,
+        isDismissible: true,
+        isScrollControlled: true,
+        builder: (context) {
+          return Container(
+            height: 300,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  'Playing from YouTube',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: YoutubePlayer(
+                    controller: _youtubeController!,
+                    showVideoProgressIndicator: true,
+                    progressIndicatorColor: spotifyGreen,
+                    progressColors: const ProgressBarColors(
+                      playedColor: spotifyGreen,
+                      handleColor: spotifyGreen,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ).then((_) {
+        // When bottom sheet is closed, pause the video
+        if (_youtubeController != null && _youtubeController!.value.isPlaying) {
+          _youtubeController!.pause();
+        }
+      });
     }
   }
 
@@ -526,16 +757,21 @@ class _SwiperState extends State<Swiper> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: ElevatedButton(
-                    onPressed: () => _playTrack(track, index),
+                    onPressed: () =>
+                        _playTrack(track, index), // Enable for all tracks
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: spotifyGreen,
+                      backgroundColor: isPlaying ? Colors.red : spotifyGreen,
                       minimumSize: const Size(double.infinity, 48),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
                     ),
                     child: Text(
-                      isPlaying ? 'Pause Preview' : 'Play Preview',
+                      isPlaying
+                          ? 'Pause Audio'
+                          : (track.previewUrl != null
+                              ? 'Play Preview'
+                              : 'Try YouTube'),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,

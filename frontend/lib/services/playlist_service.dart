@@ -256,15 +256,32 @@ class PlaylistService {
 
   Future<String?> getTrackStreamUrl(String trackUri) async {
     try {
-      // Get track ID from URI (format: spotify:track:id)
-      final trackId = trackUri.split(':').last;
+      // More robust URI parsing
+      String trackId;
+      if (trackUri.contains(':')) {
+        // Handle spotify:track:id format
+        trackId = trackUri.split(':').last;
+      } else if (trackUri.contains('/')) {
+        // Handle URL format
+        trackId = trackUri.split('/').last;
+      } else {
+        // Assume it's already an ID
+        trackId = trackUri;
+      }
+
+      print('Attempting to get preview for track ID: $trackId');
 
       // Get track information using the Spotify Web API
       final track = await _spotify.tracks.get(trackId);
 
-      // Note: Due to Spotify's DRM protection, you cannot get direct streaming URLs
-      // You would need to use the Spotify SDK for actual playback
-      // This is just returning the preview URL as a fallback
+      // Verify if preview URL exists
+      if (track.previewUrl == null || track.previewUrl!.isEmpty) {
+        print(
+            'No preview URL available for track: ${track.name} (${track.id})');
+        return null;
+      }
+
+      print('Found preview URL: ${track.previewUrl}');
       return track.previewUrl;
     } catch (e) {
       print('Error getting track stream URL: $e');
@@ -1062,6 +1079,27 @@ class PlaylistService {
       }
 
       // If all else fails, return an empty list
+      return [];
+    }
+  }
+
+  Future<List<spotify.Track>> searchTracks(String query) async {
+    try {
+      final searchResults = await _spotify.search
+          .get(query, types: [spotify.SearchType.track]).first(10);
+      // Correctly extract tracks from the Pages structure
+      // The first page contains the tracks
+      if (searchResults.isNotEmpty) {
+        final firstPage = searchResults.first;
+        // Pages have an items property containing the actual results
+        final items = firstPage.items ?? [];
+
+        // Convert dynamic items to Track objects
+        return items.whereType<spotify.Track>().toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error searching tracks: $e');
       return [];
     }
   }

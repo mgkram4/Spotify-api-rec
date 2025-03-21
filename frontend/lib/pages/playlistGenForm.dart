@@ -19,8 +19,14 @@ class _PlaylistGeneratorState extends State<PlaylistGenerator> {
   bool _isLoading = true;
   List<spotify.Track> _userTopTracks = [];
   List<spotify.Track> _recommendedTracks = [];
+  List<spotify.Track> _searchResults = []; // New list for search results
+
+  bool _showRecents = true; // Control visibility of recents section
+  bool _showSearch = false; // Control visibility of search section
 
   late final PlaylistService _playlistService;
+  final TextEditingController _searchController =
+      TextEditingController(); // For search input
 
   final List<String> moods = [
     'Happy',
@@ -47,6 +53,12 @@ class _PlaylistGeneratorState extends State<PlaylistGenerator> {
     final authService = AuthService();
     _playlistService = PlaylistService(authService.spotifyToken!);
     _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -83,6 +95,25 @@ class _PlaylistGeneratorState extends State<PlaylistGenerator> {
       });
     } catch (e) {
       print('Error loading user data: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // New method to handle Spotify song search
+  Future<void> _searchSpotify(String query) async {
+    if (query.isEmpty) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Assuming you add a searchTracks method to your PlaylistService
+      final results = await _playlistService.searchTracks(query);
+      setState(() {
+        _searchResults = results;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error searching tracks: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -234,17 +265,126 @@ class _PlaylistGeneratorState extends State<PlaylistGenerator> {
 
                             const SizedBox(height: 24),
 
-                            // Recent Recommendations
-                            const Text(
-                              'RECOMMENDED BASED ON RECENTS:',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontFamily: 'monospace',
-                              ),
+                            // Recent Recommendations - Now with Toggle
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'RECOMMENDED BASED ON RECENTS:',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    _showRecents
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _showRecents = !_showRecents;
+                                    });
+                                  },
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            ..._userTopTracks.take(5).map((track) =>
-                                _buildTrackTile(track, isSelectable: true)),
+                            if (_showRecents) ...[
+                              const SizedBox(height: 8),
+                              ..._userTopTracks.take(5).map((track) =>
+                                  _buildTrackTile(track, isSelectable: true)),
+                            ],
+
+                            const SizedBox(height: 24),
+
+                            // New Search Section with Toggle
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'SEARCH SPOTIFY SONGS:',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    _showSearch
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _showSearch = !_showSearch;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                            if (_showSearch) ...[
+                              const SizedBox(height: 8),
+                              // Search input field
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF3A3A3A),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: TextField(
+                                        controller: _searchController,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontFamily: 'monospace',
+                                        ),
+                                        decoration: const InputDecoration(
+                                          hintText: 'Search for songs...',
+                                          hintStyle:
+                                              TextStyle(color: Colors.grey),
+                                          contentPadding: EdgeInsets.symmetric(
+                                              horizontal: 12),
+                                          border: OutlineInputBorder(),
+                                        ),
+                                        onSubmitted: (value) =>
+                                            _searchSpotify(value),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFB2F5B2),
+                                      foregroundColor: Colors.black,
+                                    ),
+                                    onPressed: () =>
+                                        _searchSpotify(_searchController.text),
+                                    child: const Text(
+                                      'SEARCH',
+                                      style: TextStyle(fontFamily: 'monospace'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // Display search results
+                              if (_searchResults.isEmpty &&
+                                  _searchController.text.isNotEmpty)
+                                const Text(
+                                  'No results found',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontFamily: 'monospace',
+                                  ),
+                                )
+                              else
+                                ..._searchResults.map((track) =>
+                                    _buildTrackTile(track, isSelectable: true)),
+                            ],
 
                             const SizedBox(height: 24),
 
