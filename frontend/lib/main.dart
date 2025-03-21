@@ -69,7 +69,6 @@ class MainApp extends StatelessWidget {
             artistId: args['artistId'],
             artistName: args['artistName'],
             imageUrl: args['imageUrl'],
-            monthlyListeners: args['monthlyListeners'],
           );
         },
         '/playlist': (context) {

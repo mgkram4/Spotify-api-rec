@@ -1103,6 +1103,68 @@ class PlaylistService {
       return [];
     }
   }
+
+  Future<Map<String, dynamic>> getArtistDetails(String artistId) async {
+    try {
+      final artist = await _spotify.artists.get(artistId);
+
+      // Get artist genres for a more informative display
+      final genres = artist.genres ?? [];
+      final genreText = genres.isEmpty ? '' : 'Known for: ${genres.join(', ')}';
+
+      final stats = {
+        'Popularity': artist.popularity ?? 0,
+        'Followers': artist.followers?.total ?? 0,
+      };
+
+      // Create a more meaningful description using available data
+      final description = genreText.isEmpty
+          ? '${artist.name} is an artist on Spotify.'
+          : '${artist.name} is an artist on Spotify. ${genreText}';
+
+      return {
+        'stats': stats,
+        'description': description,
+      };
+    } catch (e) {
+      print('Error getting artist details: $e');
+      return {};
+    }
+  }
+
+  Future<List<spotify.Track>> getArtistTopTracks(String artistId) async {
+    try {
+      // Get artist's top tracks for US market
+      final topTracks = await _spotify.artists.getTopTracks(artistId, 'US');
+
+      // Convert the List<TrackSimple> to proper Track objects if needed
+      // If the tracks are missing data, fetch full track info
+      final List<spotify.Track> fullTracks = [];
+
+      for (var track in topTracks) {
+        // Check if we need to fetch the full track data
+        if (track.id != null) {
+          try {
+            // For essential data, we can sometimes use the simple track directly
+            fullTracks.add(track as spotify.Track);
+          } catch (e) {
+            // If casting fails, fetch the full track data
+            try {
+              final fullTrack = await _spotify.tracks.get(track.id!);
+              fullTracks.add(fullTrack);
+            } catch (fetchError) {
+              print('Error fetching full track data: $fetchError');
+            }
+          }
+        }
+      }
+
+      return fullTracks;
+    } catch (e) {
+      print('Error getting artist top tracks: $e');
+      return [];
+    }
+  }
 }
 
 // Add this class to your models folder
