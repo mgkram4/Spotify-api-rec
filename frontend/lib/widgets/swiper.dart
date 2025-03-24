@@ -48,6 +48,9 @@ class _SwiperState extends State<Swiper> {
   final _yt = YoutubeExplode();
   YoutubePlayerController? _youtubeController;
 
+  // Add this new variable to track the overlay entry
+  OverlayEntry? _youtubeOverlayEntry;
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +76,8 @@ class _SwiperState extends State<Swiper> {
   @override
   void dispose() {
     _audioPlayer.dispose();
+    // Remove overlay entry first before disposing controller
+    _removeYoutubeOverlay();
     _youtubeController?.dispose();
     _yt.close();
     super.dispose();
@@ -261,7 +266,7 @@ class _SwiperState extends State<Swiper> {
       final videoId = searchResults.first.id.value;
       print('Found YouTube video: $videoId');
 
-      // Create and initialize YouTube player controller
+      // Create and initialize YouTube player controller for audio only
       _youtubeController = YoutubePlayerController(
         initialVideoId: videoId,
         flags: const YoutubePlayerFlags(
@@ -270,17 +275,18 @@ class _SwiperState extends State<Swiper> {
           disableDragSeek: false,
           loop: false,
           enableCaption: false,
+          hideControls: true, // Hide video controls
         ),
       );
+
+      // Show a small notification instead of the full video
+      _showAudioPlayingNotification(track);
 
       setState(() {
         _isFullSongPlaying = true;
         _currentlyPlayingIndex = index;
         _isSearchingYouTube = false;
       });
-
-      // Add this to show the YouTube player in the UI
-      _showYouTubePlayer();
     } catch (e) {
       print('YouTube fallback failed: $e');
       setState(() {
@@ -296,50 +302,95 @@ class _SwiperState extends State<Swiper> {
     }
   }
 
-  // Add this new method to display the YouTube player in the UI
-  void _showYouTubePlayer() {
+  // Replace _showYouTubePlayer with this method to show only a notification
+  void _showAudioPlayingNotification(spotify.Track track) {
     if (_youtubeController != null) {
-      showModalBottomSheet(
-        context: context,
-        backgroundColor: spotifyGrey,
-        isDismissible: true,
-        isScrollControlled: true,
-        builder: (context) {
-          return Container(
-            height: 300,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Text(
-                  'Playing from YouTube',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: YoutubePlayer(
-                    controller: _youtubeController!,
-                    showVideoProgressIndicator: true,
-                    progressIndicatorColor: spotifyGreen,
-                    progressColors: const ProgressBarColors(
-                      playedColor: spotifyGreen,
-                      handleColor: spotifyGreen,
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.music_note, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Now playing',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
                     ),
-                  ),
+                    Text(
+                      '${track.name} - ${track.artists?.map((a) => a.name).join(", ")}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () {
+                  if (_youtubeController != null) {
+                    _youtubeController!.pause();
+                    setState(() {
+                      _isFullSongPlaying = false;
+                      _currentlyPlayingIndex = null;
+                    });
+                  }
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                },
+              ),
+            ],
+          ),
+          backgroundColor: spotifyGrey,
+          duration: Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      // Add YouTube player to widget tree but with zero size to keep audio playing
+      // First remove any existing overlay
+      _removeYoutubeOverlay();
+
+      // Then create a new one
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _youtubeController != null) {
+          // Create a new overlay entry and store the reference
+          _youtubeOverlayEntry = OverlayEntry(
+            builder: (context) => Positioned(
+              left: 0,
+              top: 0,
+              child: SizedBox(
+                width: 1,
+                height: 1,
+                child: YoutubePlayer(
+                  controller: _youtubeController!,
+                ),
+              ),
             ),
           );
-        },
-      ).then((_) {
-        // When bottom sheet is closed, pause the video
-        if (_youtubeController != null && _youtubeController!.value.isPlaying) {
-          _youtubeController!.pause();
+
+          // Insert the overlay entry
+          Overlay.of(context).insert(_youtubeOverlayEntry!);
         }
       });
+    }
+  }
+
+  // Add this helper method to properly remove the overlay
+  void _removeYoutubeOverlay() {
+    if (_youtubeOverlayEntry != null) {
+      _youtubeOverlayEntry!.remove();
+      _youtubeOverlayEntry = null;
     }
   }
 
@@ -455,6 +506,11 @@ class _SwiperState extends State<Swiper> {
                                         ? 'disliked'
                                         : 'reset';
 
+                                // Stop any currently playing audio before changing cards
+                                if (status == 'liked' || status == 'disliked') {
+                                  _stopCurrentAudio();
+                                }
+
                                 setState(() {
                                   if (status == 'liked') {
                                     _likedTracks.add(_tracks[_currentIndex]);
@@ -551,30 +607,48 @@ class _SwiperState extends State<Swiper> {
     required bool isActive,
     required String label,
   }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isActive ? color : spotifyGrey,
+    return GestureDetector(
+      onTap: () {
+        if (label == 'Like') {
+          _stopCurrentAudio();
+          setState(() {
+            _likedTracks.add(_tracks[_currentIndex]);
+            _currentIndex++;
+            _position = Offset.zero;
+          });
+        } else if (label == 'Skip') {
+          _stopCurrentAudio();
+          setState(() {
+            _currentIndex++;
+            _position = Offset.zero;
+          });
+        }
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isActive ? color : spotifyGrey,
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 24,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? color : Colors.white70,
+              fontSize: 12,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: isActive ? color : Colors.white70,
-            fontSize: 12,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -873,5 +947,33 @@ class _SwiperState extends State<Swiper> {
         ],
       ),
     );
+  }
+
+  // Add this helper method to stop any playing audio
+  void _stopCurrentAudio() {
+    // Stop YouTube player if active
+    if (_youtubeController != null && _isFullSongPlaying) {
+      _youtubeController!.pause();
+
+      // Remove the overlay before disposing the controller
+      _removeYoutubeOverlay();
+
+      _youtubeController!.dispose();
+      _youtubeController = null;
+
+      // Clear any snackbars showing "Now playing"
+      ScaffoldMessenger.of(context).clearSnackBars();
+    }
+
+    // Stop audio player if active
+    if (_audioPlayer.playing) {
+      _audioPlayer.pause();
+    }
+
+    // Reset playback state
+    setState(() {
+      _isFullSongPlaying = false;
+      _currentlyPlayingIndex = null;
+    });
   }
 }
